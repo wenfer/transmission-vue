@@ -14,19 +14,19 @@
       </div>
     </div>
 
-    <el-row :gutter="20" class="summary-row">
+    <el-row :gutter="16" class="summary-row">
       <el-col :xs="24" :sm="12" :lg="6">
         <el-card class="summary-card">
           <div class="summary-title">历史总上传量</div>
           <div class="summary-value">{{ formatBytes(totalUploaded) }}</div>
-          <div class="summary-subtitle">Transmission 返回的累计值</div>
+          <div class="summary-subtitle">{{ backendLabel }} 返回的累计值</div>
         </el-card>
       </el-col>
       <el-col :xs="24" :sm="12" :lg="6">
         <el-card class="summary-card">
           <div class="summary-title">历史总下载量</div>
           <div class="summary-value">{{ formatBytes(totalDownloaded) }}</div>
-          <div class="summary-subtitle">Transmission 返回的累计值</div>
+          <div class="summary-subtitle">{{ backendLabel }} 返回的累计值</div>
         </el-card>
       </el-col>
       <el-col :xs="24" :sm="12" :lg="6">
@@ -45,8 +45,8 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="summary-row secondary">
-      <el-col :xs="24" :sm="24" :lg="24">
+    <el-row :gutter="16" class="summary-row secondary">
+      <el-col :xs="24" :sm="12" :lg="12">
         <el-card class="summary-card summary-text-card">
           <div class="summary-title">会话概况</div>
           <div class="summary-value summary-text">
@@ -55,9 +55,18 @@
           <div class="summary-subtitle">来自 session-stats</div>
         </el-card>
       </el-col>
+      <el-col :xs="24" :sm="12" :lg="12">
+        <el-card class="summary-card summary-text-card">
+          <div class="summary-title">磁盘剩余空间</div>
+          <div class="summary-value">
+            {{ freeSpaceText }}
+          </div>
+          <div class="summary-subtitle">根据下载目录计算</div>
+        </el-card>
+      </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="summary-row secondary">
+    <el-row :gutter="16" class="summary-row secondary">
       <el-col :xs="24" :sm="12" :lg="12">
         <el-card class="summary-card summary-text-card">
           <div class="summary-title">当前下载速度</div>
@@ -78,19 +87,7 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="summary-row secondary">
-      <el-col :xs="24" :sm="12" :lg="12">
-        <el-card class="summary-card summary-text-card">
-          <div class="summary-title">磁盘剩余空间</div>
-          <div class="summary-value">
-            {{ freeSpaceText }}
-          </div>
-          <div class="summary-subtitle">根据下载目录计算</div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="20" class="charts-grid">
+    <el-row :gutter="16" class="charts-grid">
       <el-col :xs="24" :lg="24">
         <el-card class="stats-card chart-card">
           <template #header>
@@ -104,7 +101,7 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="charts-grid">
+    <el-row :gutter="16" class="charts-grid">
       <el-col :xs="24" :lg="14">
         <el-card class="stats-card chart-card">
           <template #header>
@@ -173,7 +170,8 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent, TitleComponent } from 'echarts/components'
-import * as api from '@/api/transmission'
+import * as api from '@/api/torrents'
+import { torrentBackendName } from '@/config/torrentClient'
 import type { Torrent } from '@/types/transmission'
 import { useSystemStatusStore } from '@/stores/systemStatus'
 import { getTrackerHost } from '@/utils/torrent'
@@ -187,6 +185,7 @@ interface SpeedPoint {
 }
 
 const SPEED_HISTORY_LIMIT = 40
+const backendLabel = torrentBackendName
 
 const loading = ref(false)
 const torrents = ref<Torrent[]>([])
@@ -465,7 +464,7 @@ onMounted(async () => {
 .stats-view {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .stats-header {
@@ -490,15 +489,19 @@ onMounted(async () => {
 }
 
 .summary-row {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .summary-card {
   height: 100%;
-  min-height: 150px;
+  min-height: 95px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+.summary-card :deep(.el-card__body) {
+  padding: 14px;
 }
 
 .summary-text-card {
@@ -506,30 +509,30 @@ onMounted(async () => {
 }
 
 .summary-title {
-  font-size: 14px;
+  font-size: 12px;
   color: #909399;
 }
 
 .summary-value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .summary-text {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   word-break: break-all;
 }
 
 .summary-subtitle {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11px;
   color: #a0a3a6;
 }
 
 .stats-card {
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .card-header {
@@ -545,16 +548,16 @@ onMounted(async () => {
 }
 
 .charts-grid {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .chart-card {
-  min-height: 360px;
+  min-height: 320px;
 }
 
 .chart {
   width: 100%;
-  height: 320px;
+  height: 280px;
 }
 
 @media (max-width: 768px) {
@@ -578,15 +581,19 @@ onMounted(async () => {
   }
 
   .summary-card {
-    min-height: 120px;
+    min-height: 85px;
+  }
+
+  .summary-card :deep(.el-card__body) {
+    padding: 12px;
   }
 
   .chart-card {
-    min-height: 300px;
+    min-height: 280px;
   }
 
   .chart {
-    height: 260px;
+    height: 240px;
   }
 
   .stats-view :deep(.el-row) {

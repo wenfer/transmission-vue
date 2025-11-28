@@ -12,93 +12,15 @@ export interface RpcResponse<T = any> {
   tag?: number
 }
 
-// 种子状态枚举
-export const TorrentStatusEnum = {
-  STOPPED: 0,
-  CHECK_WAIT: 1,
-  CHECK: 2,
-  DOWNLOAD_WAIT: 3,
-  DOWNLOAD: 4,
-  SEED_WAIT: 5,
-  SEED: 6,
-} as const
-
-export type TorrentStatus = (typeof TorrentStatusEnum)[keyof typeof TorrentStatusEnum]
-
-// 种子信息接口
-export interface Torrent {
-  id: number
-  name: string
-  status: TorrentStatus
-  totalSize: number
-  percentDone: number
-  rateDownload: number
-  rateUpload: number
-  uploadRatio: number
-  eta: number
-  peersConnected: number
-  peersSendingToUs?: number
-  peersGettingFromUs?: number
-  addedDate: number
-  doneDate: number
-  error: number
-  errorString: string
-  downloadDir: string
-  hashString: string
-  uploadedEver: number
-  downloadedEver: number
-  activityDate: number
-  labels?: string[]
-  trackers?: TorrentTracker[]
-  trackerStats?: TorrentTrackerStat[]
-  comment?: string
-  creator?: string
-  pieceCount?: number
-  pieceSize?: number
-  dateCreated?: number
-  files?: TorrentFile[]
-  fileStats?: TorrentFileStat[]
-  isPrivate?: boolean
-  downloadLimit?: number
-  uploadLimit?: number
-  downloadLimited?: boolean
-  uploadLimited?: boolean
-  bandwidthPriority?: number
-  webseeds?: string[]
-  // 可以根据需要继续添加更多字段
-}
-
-export interface TorrentTracker {
-  id: number
-  announce: string
-  scrape: string
-  tier: number
-}
-
-export interface TorrentTrackerStat {
-  announce: string
-  host: string
-  seederCount: number
-  leecherCount: number
-  downloadCount: number
-  isBackup: boolean
-  lastAnnounceTime: number
-  lastAnnounceSucceeded: boolean
-  lastAnnouncePeerCount: number
-  nextAnnounceTime: number
-}
-
-export interface TorrentFile {
-  name: string
-  length: number
-  bytesCompleted: number
-}
-
-export interface TorrentFileStat {
-  bytesCompleted: number
-  priority: number
-  wanted: boolean
-}
+export {
+  TorrentStatusEnum,
+  type TorrentStatus,
+  type Torrent,
+  type TorrentTracker,
+  type TorrentTrackerStat,
+  type TorrentFile,
+  type TorrentFileStat,
+} from './torrent'
 
 export interface FreeSpaceResult {
   path: string
@@ -153,6 +75,8 @@ export interface SessionConfig {
   'seedIdleLimited': boolean
   'peer-limit-per-torrent': number
   'peer-limit-global': number
+  'upload-slots-global'?: number
+  'upload-slots-per-torrent'?: number
   'peer-port': number
   'peer-port-random-on-start': boolean
   'port-forwarding-enabled': boolean
@@ -167,6 +91,20 @@ export interface SessionConfig {
   'seed-queue-enabled': boolean
   'queue-stalled-enabled': boolean
   'queue-stalled-minutes': number
+  'max-active-torrents'?: number
+  'dont-count-slow-torrents'?: boolean
+  'web-ui-username'?: string
+  'web-ui-password'?: string
+  'web-ui-address'?: string
+  'web-ui-port'?: number
+  'web-ui-session-timeout'?: number
+  'bypass-local-auth'?: boolean
+  'web-ui-csrf-protection'?: boolean
+  'web-ui-secure-cookie'?: boolean
+  'web-ui-max-auth-fail-count'?: number
+  'web-ui-ban-duration'?: number
+  'alternative-webui-enabled'?: boolean
+  'alternative-webui-path'?: string
   'rpc-version': number
   'rpc-version-minimum': number
   'rpc-version-semver'?: string

@@ -11,11 +11,12 @@
           aria-label="展开导航菜单"
           @click="isMenuOpen = true"
         />
-        <h1 class="title">Transmission Vue</h1>
+        <h1 class="title">{{ backendLabel }} Vue</h1>
         <span class="version-badge">v{{ frontendVersion }}</span>
       </div>
       <div class="header-right">
         <el-button :icon="Setting" circle plain @click="$router.push('/settings')" />
+        <el-button :icon="SwitchButton" circle plain @click="handleLogout" title="退出登录" />
       </div>
     </el-header>
 
@@ -71,13 +72,20 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { Setting, List, TrendCharts, Menu } from '@element-plus/icons-vue'
+import { Setting, List, TrendCharts, Menu, SwitchButton } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 import { useSystemStatusStore } from '@/stores/systemStatus'
+import { useConnectionStore } from '@/stores/connection'
 import { useMediaQuery } from '@/utils/useMediaQuery'
 import SidebarStatus from './components/SidebarStatus.vue'
+import { torrentBackendName } from '@/config/torrentClient'
 
+const router = useRouter()
 const systemStatusStore = useSystemStatusStore()
+const connectionStore = useConnectionStore()
+const backendLabel = torrentBackendName
 const { sessionStats, freeSpaceBytes, sessionConfig, lastUpdated } = storeToRefs(systemStatusStore)
 const isMobile = useMediaQuery('(max-width: 768px)')
 const isMenuOpen = ref(false)
@@ -121,6 +129,31 @@ watch(isMobile, (mobile) => {
 const handleMenuSelect = () => {
   if (isMobile.value) {
     isMenuOpen.value = false
+  }
+}
+
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出登录吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    // 停止定时刷新
+    systemStatusStore.stop()
+
+    // 清除连接状态
+    connectionStore.setConnected(false)
+
+    // 跳转到登录页
+    router.push('/login')
+  } catch (error) {
+    // 用户取消
   }
 }
 

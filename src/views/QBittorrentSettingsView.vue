@@ -1,0 +1,664 @@
+<template>
+  <div class="settings-view">
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>qBittorrent 全局设置</span>
+          <div class="header-actions">
+            <el-button type="primary" size="small" @click="saveSettings">保存设置</el-button>
+            <el-button size="small" @click="loadSettings">重置</el-button>
+          </div>
+        </div>
+      </template>
+
+      <el-tabs v-model="activeTab" class="settings-tabs">
+        <!-- 下载与文件 -->
+        <el-tab-pane label="下载与文件" name="download">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="下载目录">
+                  <el-input v-model="settings['download-dir']" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="未完成目录">
+                  <div class="inline-row">
+                    <el-switch v-model="settings['incomplete-dir-enabled']" />
+                    <el-input
+                      v-model="settings['incomplete-dir']"
+                      :disabled="!settings['incomplete-dir-enabled']"
+                      placeholder=".../Incomplete"
+                      class="inline-input"
+                    />
+                  </div>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="新增种子自动开始">
+                  <el-switch v-model="settings['start-added-torrents']" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 速度限制 -->
+        <el-tab-pane label="速度限制" name="speed">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="下载限速 (KB/s)">
+                  <div class="inline-row">
+                    <el-switch v-model="settings['speed-limit-down-enabled']" />
+                    <el-input-number
+                      v-model="settings['speed-limit-down']"
+                      :disabled="!settings['speed-limit-down-enabled']"
+                      :min="0"
+                      class="inline-input"
+                    />
+                  </div>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="上传限速 (KB/s)">
+                  <div class="inline-row">
+                    <el-switch v-model="settings['speed-limit-up-enabled']" />
+                    <el-input-number
+                      v-model="settings['speed-limit-up']"
+                      :disabled="!settings['speed-limit-up-enabled']"
+                      :min="0"
+                      class="inline-input"
+                    />
+                  </div>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="备用下载限速 (KB/s)">
+                  <el-input-number v-model="settings['alt-speed-down']" :min="0" class="full-width" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="备用上传限速 (KB/s)">
+                  <el-input-number v-model="settings['alt-speed-up']" :min="0" class="full-width" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="分享率限制">
+                  <div class="inline-row">
+                    <el-switch v-model="settings['seedRatioLimited']" />
+                    <el-input-number
+                      v-model="settings['seedRatioLimit']"
+                      :disabled="!settings['seedRatioLimited']"
+                      :min="0"
+                      :step="0.1"
+                      class="inline-input"
+                    />
+                  </div>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="做种时间限制 (分钟)">
+                  <div class="inline-row">
+                    <el-switch v-model="settings['seedIdleLimited']" />
+                    <el-input-number
+                      v-model="settings['seedIdleLimit']"
+                      :disabled="!settings['seedIdleLimited']"
+                      :min="0"
+                      class="inline-input"
+                    />
+                  </div>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 连接与端口 -->
+        <el-tab-pane label="连接与端口" name="connection">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="8">
+                <el-form-item label="Peer 端口">
+                  <el-input-number v-model="settings['peer-port']" :min="1" :max="65535" class="full-width" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="端口映射 (UPnP)">
+                  <el-switch v-model="settings['port-forwarding-enabled']" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="启动时随机端口">
+                  <el-switch v-model="settings['peer-port-random-on-start']" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="全局连接数">
+                  <el-input-number v-model="maxConnec" :min="1" class="full-width" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="单种连接数">
+                  <el-input-number v-model="maxConnecPerTorrent" :min="1" class="full-width" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="全局上传槽位">
+                  <el-input-number v-model="maxUploads" :min="1" class="full-width" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="单种上传槽位">
+                  <el-input-number v-model="maxUploadsPerTorrent" :min="1" class="full-width" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="加密策略">
+                  <el-select v-model="settings.encryption" class="full-width">
+                    <el-option
+                      v-for="option in encryptionOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 协议支持 -->
+        <el-tab-pane label="协议支持" name="protocol">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="12" :md="6">
+                <el-form-item label="DHT">
+                  <el-switch v-model="settings['dht-enabled']" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <el-form-item label="PEX">
+                  <el-switch v-model="settings['pex-enabled']" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <el-form-item label="LPD">
+                  <el-switch v-model="settings['lpd-enabled']" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <el-form-item label="uTP">
+                  <el-switch v-model="settings['utp-enabled']" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 队列管理 -->
+        <el-tab-pane label="队列管理" name="queue">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="8">
+                <el-form-item label="启用队列">
+                  <el-switch v-model="queueingEnabled" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="最大活动下载">
+                  <el-input-number
+                    v-model="maxActiveDownloads"
+                    :disabled="!queueingEnabled"
+                    :min="0"
+                    class="full-width"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="最大活动上传">
+                  <el-input-number
+                    v-model="maxActiveUploads"
+                    :disabled="!queueingEnabled"
+                    :min="0"
+                    class="full-width"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="8">
+                <el-form-item label="最大活动总数">
+                  <el-input-number
+                    v-model="maxActiveTorrents"
+                    :disabled="!queueingEnabled"
+                    :min="0"
+                    class="full-width"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="排除慢速种子">
+                  <el-switch v-model="dontCountSlowTorrents" :disabled="!queueingEnabled" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- WebUI 配置 -->
+        <el-tab-pane label="WebUI 配置" name="webui">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="用户名">
+                  <el-input v-model="webUiUsername" placeholder="admin" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="密码">
+                  <el-input
+                    v-model="webUiPassword"
+                    type="password"
+                    placeholder="留空则不修改"
+                    show-password
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="8">
+                <el-form-item label="监听地址">
+                  <el-input v-model="webUiAddress" placeholder="*" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="监听端口">
+                  <el-input-number v-model="webUiPort" :min="1" :max="65535" class="full-width" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="8">
+                <el-form-item label="会话超时(秒)">
+                  <el-input-number v-model="webUiSessionTimeout" :min="0" class="full-width" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="12" :md="6">
+                <el-form-item label="本地跳过认证">
+                  <el-switch v-model="bypassLocalAuth" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <el-form-item label="CSRF 保护">
+                  <el-switch v-model="webUiCsrfProtection" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <el-form-item label="安全 Cookie">
+                  <el-switch v-model="webUiSecureCookie" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="最大失败次数">
+                  <el-input-number v-model="webUiMaxAuthFailCount" :min="0" class="full-width" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="封禁时长(秒)">
+                  <el-input-number v-model="webUiBanDuration" :min="0" class="full-width" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24">
+                <el-form-item label="使用替代 WebUI">
+                  <div class="inline-row">
+                    <el-switch v-model="alternativeWebuiEnabled" />
+                    <el-input
+                      v-model="alternativeWebuiPath"
+                      :disabled="!alternativeWebuiEnabled"
+                      placeholder="/path/to/custom/webui"
+                      class="inline-input"
+                    />
+                  </div>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 系统信息 -->
+        <el-tab-pane label="系统信息" name="system">
+          <el-form
+            v-loading="loading"
+            :model="settings"
+            :label-position="formLabelPosition"
+            :label-width="formLabelWidth"
+            size="small"
+            class="compact-form"
+          >
+            <el-row :gutter="16">
+              <el-col :xs="24" :md="12">
+                <el-form-item label="qBittorrent 版本">
+                  <span class="readonly-value">{{ settings.version || '未知' }}</span>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :md="12">
+                <el-form-item label="当前用户名">
+                  <span class="readonly-value">{{ settings['rpc-username'] || '未知' }}</span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import * as api from '@/api/torrents'
+import type { SessionConfig } from '@/types/transmission'
+import { useMediaQuery } from '@/utils/useMediaQuery'
+
+const loading = ref(false)
+const settings = ref<Partial<SessionConfig>>({})
+const activeTab = ref('download')
+const encryptionOptions = [
+  { label: '需要 (required)', value: 'required' },
+  { label: '优先 (preferred)', value: 'preferred' },
+  { label: '允许明文 (tolerated)', value: 'tolerated' },
+]
+
+const isMobile = useMediaQuery('(max-width: 768px)')
+const formLabelPosition = computed(() => (isMobile.value ? 'top' : 'left'))
+const formLabelWidth = computed(() => (isMobile.value ? 'auto' : '120px'))
+
+// Connection & Port settings
+const maxConnec = ref(0)
+const maxConnecPerTorrent = ref(0)
+const maxUploads = ref(0)
+const maxUploadsPerTorrent = ref(0)
+
+// Queue settings
+const queueingEnabled = ref(false)
+const maxActiveDownloads = ref(0)
+const maxActiveUploads = ref(0)
+const maxActiveTorrents = ref(0)
+const dontCountSlowTorrents = ref(false)
+
+// WebUI settings
+const webUiUsername = ref('')
+const webUiPassword = ref('')
+const webUiAddress = ref('*')
+const webUiPort = ref(8080)
+const webUiSessionTimeout = ref(3600)
+const bypassLocalAuth = ref(false)
+const webUiCsrfProtection = ref(true)
+const webUiSecureCookie = ref(false)
+const webUiMaxAuthFailCount = ref(5)
+const webUiBanDuration = ref(3600)
+const alternativeWebuiEnabled = ref(false)
+const alternativeWebuiPath = ref('')
+
+const editableFields: (keyof SessionConfig)[] = [
+  'download-dir',
+  'incomplete-dir',
+  'incomplete-dir-enabled',
+  'start-added-torrents',
+  'speed-limit-down',
+  'speed-limit-down-enabled',
+  'speed-limit-up',
+  'speed-limit-up-enabled',
+  'alt-speed-down',
+  'alt-speed-up',
+  'seedRatioLimited',
+  'seedRatioLimit',
+  'seedIdleLimited',
+  'seedIdleLimit',
+  'peer-limit-per-torrent',
+  'peer-limit-global',
+  'peer-port',
+  'peer-port-random-on-start',
+  'port-forwarding-enabled',
+  'dht-enabled',
+  'lpd-enabled',
+  'pex-enabled',
+  'utp-enabled',
+  'encryption',
+  'download-queue-size',
+  'download-queue-enabled',
+  'seed-queue-size',
+  'seed-queue-enabled',
+  'queue-stalled-enabled',
+]
+
+const loadSettings = async () => {
+  loading.value = true
+  try {
+    const sessionData = await api.getSession()
+    settings.value = sessionData
+
+    // Map additional qBittorrent-specific settings
+    maxConnec.value = sessionData['peer-limit-global'] || 0
+    maxConnecPerTorrent.value = sessionData['peer-limit-per-torrent'] || 0
+    maxUploads.value = sessionData['upload-slots-global'] || 0
+    maxUploadsPerTorrent.value = sessionData['upload-slots-per-torrent'] || 0
+
+    queueingEnabled.value = sessionData['queue-stalled-enabled'] || false
+    maxActiveDownloads.value = sessionData['download-queue-size'] || 0
+    maxActiveUploads.value = sessionData['seed-queue-size'] || 0
+    maxActiveTorrents.value = sessionData['max-active-torrents'] || 0
+    dontCountSlowTorrents.value = sessionData['dont-count-slow-torrents'] || false
+
+    webUiUsername.value = sessionData['web-ui-username'] || ''
+    webUiPassword.value = ''
+    webUiAddress.value = sessionData['web-ui-address'] || '*'
+    webUiPort.value = sessionData['web-ui-port'] || 8080
+    webUiSessionTimeout.value = sessionData['web-ui-session-timeout'] || 3600
+    bypassLocalAuth.value = sessionData['bypass-local-auth'] || false
+    webUiCsrfProtection.value = sessionData['web-ui-csrf-protection'] !== false
+    webUiSecureCookie.value = sessionData['web-ui-secure-cookie'] || false
+    webUiMaxAuthFailCount.value = sessionData['web-ui-max-auth-fail-count'] || 5
+    webUiBanDuration.value = sessionData['web-ui-ban-duration'] || 3600
+    alternativeWebuiEnabled.value = sessionData['alternative-webui-enabled'] || false
+    alternativeWebuiPath.value = sessionData['alternative-webui-path'] || ''
+  } catch (error: any) {
+    ElMessage.error(`加载设置失败: ${error.message}`)
+  } finally {
+    loading.value = false
+  }
+}
+
+const saveSettings = async () => {
+  loading.value = true
+  try {
+    const updates: Partial<SessionConfig> = {}
+
+    // Save basic editable fields
+    editableFields.forEach((key) => {
+      if (key in settings.value) {
+        updates[key] = settings.value[key] as any
+      }
+    })
+
+    // Add connection & upload slot settings
+    updates['peer-limit-global'] = maxConnec.value
+    updates['peer-limit-per-torrent'] = maxConnecPerTorrent.value
+    updates['upload-slots-global'] = maxUploads.value
+    updates['upload-slots-per-torrent'] = maxUploadsPerTorrent.value
+
+    // Add queue settings
+    updates['queue-stalled-enabled'] = queueingEnabled.value
+    updates['download-queue-size'] = maxActiveDownloads.value
+    updates['seed-queue-size'] = maxActiveUploads.value
+    updates['max-active-torrents'] = maxActiveTorrents.value
+    updates['dont-count-slow-torrents'] = dontCountSlowTorrents.value
+
+    // Add WebUI settings
+    updates['web-ui-username'] = webUiUsername.value
+    if (webUiPassword.value) {
+      updates['web-ui-password'] = webUiPassword.value
+    }
+    updates['web-ui-address'] = webUiAddress.value
+    updates['web-ui-port'] = webUiPort.value
+    updates['web-ui-session-timeout'] = webUiSessionTimeout.value
+    updates['bypass-local-auth'] = bypassLocalAuth.value
+    updates['web-ui-csrf-protection'] = webUiCsrfProtection.value
+    updates['web-ui-secure-cookie'] = webUiSecureCookie.value
+    updates['web-ui-max-auth-fail-count'] = webUiMaxAuthFailCount.value
+    updates['web-ui-ban-duration'] = webUiBanDuration.value
+    updates['alternative-webui-enabled'] = alternativeWebuiEnabled.value
+    updates['alternative-webui-path'] = alternativeWebuiPath.value
+
+    await api.setSession(updates)
+    ElMessage.success('设置已保存')
+    await loadSettings()
+  } catch (error: any) {
+    ElMessage.error(`保存设置失败: ${error.message}`)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadSettings()
+})
+</script>
+
+<style scoped>
+.settings-view {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-tabs {
+  margin-top: -12px;
+}
+
+.settings-tabs :deep(.el-tabs__content) {
+  padding-top: 16px;
+}
+
+.compact-form {
+  max-width: 1200px;
+}
+
+.compact-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.inline-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.inline-input {
+  flex: 1;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.readonly-value {
+  color: var(--el-text-color-regular);
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .settings-view {
+    padding: 12px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions :deep(.el-button) {
+    flex: 1;
+  }
+
+  .compact-form :deep(.el-form-item__label) {
+    margin-bottom: 4px;
+  }
+}
+</style>

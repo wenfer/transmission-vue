@@ -2,7 +2,23 @@
   <router-view />
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useConnectionStore } from '@/stores/connection'
+import { configureConnection } from '@/api/torrents'
+
+const connectionStore = useConnectionStore()
+
+onMounted(() => {
+  // 加载已保存的配置和连接状态
+  connectionStore.loadConfig()
+
+  // 如果有保存的配置，恢复连接配置（但不重新登录）
+  if (connectionStore.serverConfig.username) {
+    configureConnection(connectionStore.serverConfig)
+  }
+})
+</script>
 
 <style>
 * {

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import dayjs from 'dayjs'
-import * as api from '@/api/transmission'
+import * as api from '@/api/torrents'
 import type { SessionStats, SessionConfig } from '@/types/transmission'
 
 const POLL_INTERVAL = 5000

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { torrentApiBase } from '@/config/torrentClient'
 
 export interface ServerConfig {
   url: string
@@ -10,7 +11,7 @@ export interface ServerConfig {
 export const useConnectionStore = defineStore('connection', () => {
   const isConnected = ref(false)
   const serverConfig = ref<ServerConfig>({
-    url: '/transmission/rpc',
+    url: torrentApiBase,
     username: '',
     password: '',
   })
@@ -20,6 +21,11 @@ export const useConnectionStore = defineStore('connection', () => {
     const savedConfig = localStorage.getItem('serverConfig')
     if (savedConfig) {
       serverConfig.value = JSON.parse(savedConfig)
+    }
+    // 加载连接状态
+    const savedConnected = localStorage.getItem('isConnected')
+    if (savedConnected === 'true') {
+      isConnected.value = true
     }
   }
 
@@ -32,6 +38,7 @@ export const useConnectionStore = defineStore('connection', () => {
   // 设置连接状态
   const setConnected = (status: boolean) => {
     isConnected.value = status
+    localStorage.setItem('isConnected', status.toString())
   }
 
   return {

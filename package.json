@@ -1,12 +1,20 @@
 {
-  "name": "transmission-vue",
+  "name": "bitcake",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.1.0",
   "type": "module",
+  "description": "A modern, unified web interface for Transmission and qBittorrent",
   "scripts": {
     "dev": "vite",
+    "dev:transmission": "vite --mode transmission",
+    "dev:qbittorrent": "vite --mode qbittorrent",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "build:transmission": "vue-tsc -b && vite build --mode transmission",
+    "build:qbittorrent": "vue-tsc -b && vite build --mode qbittorrent",
+    "build:both": "pnpm run build:transmission && pnpm run build:qbittorrent",
+    "preview": "vite preview",
+    "preview:transmission": "vite preview --outDir dist-transmission",
+    "preview:qbittorrent": "vite preview --outDir dist-qbittorrent"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

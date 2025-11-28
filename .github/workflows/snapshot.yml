@@ -26,8 +26,13 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Extract package version
         id: package-version
@@ -39,22 +44,43 @@ jobs:
         id: commit-id
         run: echo "short_sha=$(git rev-parse --short=7 HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build project
-        run: npm run build
+      - name: Build Transmission version
+        run: pnpm run build:transmission
 
-      - name: Compress files to ZIP  # 新增压缩步骤
+      - name: Build qBittorrent version
+        run: pnpm run build:qbittorrent
+
+      - name: Compress files to ZIP
         run: |
-          zip -r release.zip dist/  # 压缩 dist 目录
-          echo "ZIP_PATH=$(pwd)/release.zip" >> $GITHUB_ENV  # 存储路径
+          # 压缩 Transmission 版本
+          cd dist-transmission
+          zip -r ../transmission-vue-${{ steps.package-version.outputs.version }}-transmission.zip .
+          cd ..
+
+          # 压缩 qBittorrent 版本 (在 public 子目录中)
+          cd dist-qbittorrent
+          zip -r ../transmission-vue-${{ steps.package-version.outputs.version }}-qbittorrent.zip .
+          cd ..
+
+          # 输出文件路径供后续步骤使用
+          echo "TRANSMISSION_ZIP=$(pwd)/transmission-vue-${{ steps.package-version.outputs.version }}-transmission.zip" >> $GITHUB_ENV
+          echo "QBITTORRENT_ZIP=$(pwd)/transmission-vue-${{ steps.package-version.outputs.version }}-qbittorrent.zip" >> $GITHUB_ENV
 
       - name: Create Snapshot Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: snapshot-${{ steps.commit-id.outputs.short_sha }}
+          tag_name: ${{ steps.package-version.outputs.version }}-${{ steps.commit-id.outputs.short_sha }}
           name: ${{ steps.package-version.outputs.version }}-${{ steps.commit-id.outputs.short_sha }}
-          body: "Automated snapshot build from commit ${{ github.sha }}"
+          body: |
+            Automated snapshot build from commit ${{ github.sha }}
+
+            ## 📦 Build Artifacts
+            - `transmission-vue-${{ steps.package-version.outputs.version }}-transmission.zip` - Transmission 客户端版本
+            - `transmission-vue-${{ steps.package-version.outputs.version }}-qbittorrent.zip` - qBittorrent 客户端版本
           prerelease: true
-          files: ${{ env.ZIP_PATH }}  # 上传压缩包
+          files: |
+            ${{ env.TRANSMISSION_ZIP }}
+            ${{ env.QBITTORRENT_ZIP }}
 
         env:
           GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}

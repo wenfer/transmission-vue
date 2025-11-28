@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios'
 import type { RpcRequest, RpcResponse } from '@/types/transmission'
+import { torrentApiBase } from '@/config/torrentClient'
 
 const SESSION_STORAGE_KEY = 'transmission-session-id'
 
@@ -7,7 +8,7 @@ class TransmissionClient {
   private client: AxiosInstance
   private sessionId: string = ''
 
-  constructor(baseURL: string = '/transmission/rpc') {
+  constructor(baseURL: string = torrentApiBase) {
     this.sessionId = this.loadStoredSessionId()
 
     this.client = axios.create({
@@ -52,6 +53,18 @@ class TransmissionClient {
     this.client.defaults.auth = { username, password }
   }
 
+  setBaseUrl(url: string) {
+    if (url && url !== this.client.defaults.baseURL) {
+      this.client.defaults.baseURL = url
+      this.clearSession()
+    }
+  }
+
+  clearAuth() {
+    this.client.defaults.auth = undefined
+    this.clearSession()
+  }
+
   /**
    * 发送 RPC 请求
    */
@@ -82,6 +95,11 @@ class TransmissionClient {
     } else {
       window.localStorage.removeItem(SESSION_STORAGE_KEY)
     }
+  }
+
+  private clearSession() {
+    this.sessionId = ''
+    this.persistSessionId()
   }
 
   private updateSessionId(response: AxiosResponse<any>) {
