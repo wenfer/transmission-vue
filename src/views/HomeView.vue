@@ -642,6 +642,7 @@ import {
   VideoPause,
   Delete,
   Upload,
+  Filter,
 } from '@element-plus/icons-vue'
 import * as api from '@/api/torrents'
 import type { AddTorrentPayload } from '@/api/torrents'
@@ -936,7 +937,7 @@ const filteredTorrents = computed(() => {
         : statusFilter.value === 'error'
           ? isTorrentError(torrent)
           : statusFilter.value === 'queued'
-            ? [TorrentStatusEnum.CHECK_WAIT, TorrentStatusEnum.DOWNLOAD_WAIT, TorrentStatusEnum.SEED_WAIT].includes(torrent.status)
+            ? ([TorrentStatusEnum.CHECK_WAIT, TorrentStatusEnum.DOWNLOAD_WAIT, TorrentStatusEnum.SEED_WAIT] as TorrentStatus[]).includes(torrent.status)
             : torrent.status === statusFilter.value
     const matchesTracker =
       !trackerFilter.value ||
