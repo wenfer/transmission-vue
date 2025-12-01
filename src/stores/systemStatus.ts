@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import * as api from '@/api/torrents'
 import type { SessionStats, SessionConfig } from '@/types/transmission'
 
-const POLL_INTERVAL = 5000
+const POLL_INTERVAL = 3000
 
 interface LoadOptions {
   silent?: boolean

@@ -75,6 +75,7 @@ export interface Torrent {
   downloadedEver?: number
   activityDate?: number
   labels?: string[]
+  category?: string
   trackers?: TorrentTracker[]
   trackerStats?: TorrentTrackerStat[]
   comment?: string

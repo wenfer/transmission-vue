@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
   // 配置开发代理
   const proxy: Record<string, any> = {}
   if (isQbittorrent) {
-    const target = env.VITE_PROXY_QB_URL || 'http://10.229.160.54:8080'
+    const target = env.VITE_PROXY_QB_URL || 'http://localhost:8080'
     proxy['/api/v2'] = {
       target,
       changeOrigin: true,
@@ -25,12 +25,13 @@ export default defineConfig(({ mode }) => {
     }
     console.log('  Proxy /api/v2 →', target)
   } else {
-    const target = env.VITE_PROXY_TRANSMISSION_URL || 'http://10.229.160.54:9091'
+    const target = env.VITE_PROXY_TRANSMISSION_URL || 'http://localhost:9091'
     proxy['/transmission'] = {
       target,
       changeOrigin: true,
       rewrite: (path: string) => path
     }
+    console.log('  Proxy /transmission →', target)
   }
 
   return {

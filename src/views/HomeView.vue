@@ -69,6 +69,23 @@
               :value="tracker.value"
             />
           </el-select>
+          <el-select
+            v-if="categoryOptions.length > 0"
+            v-model="categoryFilter"
+            placeholder="选择分类"
+            clearable
+            filterable
+            class="filter-select"
+            @clear="categoryFilter = ''"
+          >
+            <el-option label="全部分类" value="" />
+            <el-option
+              v-for="category in categoryOptions"
+              :key="category.value"
+              :label="category.label"
+              :value="category.value"
+            />
+          </el-select>
           <el-input
             v-model="searchKeyword"
             placeholder="搜索种子..."
@@ -341,6 +358,7 @@
       <button @click="handleContextAction('verify')">重新校验</button>
       <button @click="handleContextAction('reannounce')">重新汇报</button>
       <button @click="handleContextAction('location')">变更保存目录</button>
+      <button @click="handleContextAction('category')">设置分类</button>
       <button @click="handleContextAction('detail')">查看详情</button>
       <button @click="handleContextAction('limit')">限速设置</button>
       <button class="danger" @click="handleContextAction('delete')">删除</button>
@@ -391,13 +409,32 @@
         <el-form-item label="新的保存目录">
           <el-input v-model="locationForm.path" placeholder="/data/downloads" />
         </el-form-item>
-        <el-form-item label="移动已有数据">
-          <el-switch v-model="locationForm.move" active-text="移动" inactive-text="仅更新路径" />
+        <el-form-item label="数据文件处理">
+          <el-switch v-model="locationForm.move" active-text="同时移动文件" inactive-text="仅改路径记录" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showLocationDialog = false">取消</el-button>
         <el-button type="primary" @click="submitLocationChange">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 设置分类对话框 -->
+    <el-dialog v-model="showCategoryDialog" title="设置分类" :width="defaultDialogWidth">
+      <el-form :model="categoryForm" label-width="80px">
+        <el-form-item label="分类">
+          <el-autocomplete
+            v-model="categoryForm.category"
+            :fetch-suggestions="searchCategory"
+            placeholder="输入分类名称或从现有分类中选择"
+            style="width: 100%"
+            clearable
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCategoryDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitCategoryChange">确定</el-button>
       </template>
     </el-dialog>
 
@@ -447,6 +484,12 @@
                   </el-descriptions-item>
                   <el-descriptions-item label="哈希" :span="2">
                     <span class="hash-value">{{ detailTorrent.hashString }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item v-if="detailTorrent.category" label="分类" :span="2">
+                    <el-tag size="small">{{ detailTorrent.category }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item v-if="detailTorrent.comment" label="描述" :span="2">
+                    {{ detailTorrent.comment }}
                   </el-descriptions-item>
                   <el-descriptions-item v-if="detailTorrent.errorString" label="错误信息" :span="2">
                     <el-text type="danger">{{ detailTorrent.errorString }}</el-text>
@@ -648,12 +691,13 @@ import * as api from '@/api/torrents'
 import type { AddTorrentPayload } from '@/api/torrents'
 import type { Torrent, TorrentStatus } from '@/types/transmission'
 import { TorrentStatusEnum } from '@/types/transmission'
-import { getTrackerHost } from '@/utils/torrent'
+import { getTrackerHost, getTrackerDisplayName, matchesTrackerFilter } from '@/utils/torrent'
 import { useMediaQuery } from '@/utils/useMediaQuery'
 import { useFilterStore } from '@/stores/filter'
 import { storeToRefs } from 'pinia'
+import { isQbittorrent } from '@/config/torrentClient'
 
-const REFRESH_INTERVAL = 2000
+const REFRESH_INTERVAL = 3000
 const COLUMN_WIDTH_STORAGE_KEY = 'tv_table_column_widths'
 const DETAIL_FIELDS = [
   'id',
@@ -678,10 +722,12 @@ const DETAIL_FIELDS = [
   'uploadLimit',
   'uploadLimited',
   'peers',
+  'comment',
+  'category',
 ]
 
 const filterStore = useFilterStore()
-const { statusFilter, trackerFilter } = storeToRefs(filterStore)
+const { statusFilter, trackerFilter, categoryFilter } = storeToRefs(filterStore)
 
 interface LimitFormState {
   downloadLimited: boolean
@@ -746,6 +792,12 @@ const locationForm = ref({
   move: true,
 })
 const locationTarget = ref<Torrent | null>(null)
+const showCategoryDialog = ref(false)
+const categoryForm = ref({
+  category: '',
+})
+const categoryTarget = ref<Torrent | null>(null)
+const availableCategories = ref<string[]>([])
 const showDetailDialog = ref(false)
 const detailLoading = ref(false)
 const detailTorrent = ref<Torrent | null>(null)
@@ -824,8 +876,16 @@ const contextMenu = ref<{
 const contextMenuRef = ref<HTMLElement | null>(null)
 
 const getDefaultTracker = (torrent: Torrent): string => {
+  // 优先选择第一个汇报成功的tracker
+  if (torrent.trackerStats && torrent.trackerStats.length > 0) {
+    const successTracker = torrent.trackerStats.find(stat => stat.lastAnnounceSucceeded)
+    if (successTracker) {
+      return getTrackerDisplayName(successTracker.announce)
+    }
+  }
+  // 如果没有汇报成功的，则使用第一个tracker
   const tracker = torrent.trackers?.[0]
-  return tracker ? getTrackerHost(tracker.announce) : '—'
+  return tracker ? getTrackerDisplayName(tracker.announce) : '—'
 }
 
 const persistColumnWidths = () => {
@@ -941,10 +1001,11 @@ const filteredTorrents = computed(() => {
             : torrent.status === statusFilter.value
     const matchesTracker =
       !trackerFilter.value ||
-      (torrent.trackers ?? []).some(
-        (tracker) => getTrackerHost(tracker.announce) === trackerFilter.value
-      )
-    return matchesKeyword && matchesStatus && matchesTracker
+      (torrent.trackers ?? []).some((tracker) => matchesTrackerFilter(tracker.announce, trackerFilter.value))
+    const matchesCategory =
+      !categoryFilter.value ||
+      (categoryFilter.value === '无分类' ? !torrent.category : torrent.category === categoryFilter.value)
+    return matchesKeyword && matchesStatus && matchesTracker && matchesCategory
   })
 })
 
@@ -1005,18 +1066,33 @@ const paginatedTorrents = computed(() => {
 })
 
 const trackerOptions = computed(() => {
-  const hosts = new Set<string>()
+  const trackerMap = new Map<string, string>() // displayName -> filterValue
   torrents.value.forEach((torrent) => {
     torrent.trackers?.forEach((tracker) => {
+      const displayName = getTrackerDisplayName(tracker.announce)
       const host = getTrackerHost(tracker.announce)
-      if (host) {
-        hosts.add(host)
-      }
+      trackerMap.set(displayName, displayName)
     })
   })
-  return Array.from(hosts)
-    .sort((a, b) => a.localeCompare(b))
-    .map((host) => ({ label: host, value: host }))
+  return Array.from(trackerMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([displayName, value]) => ({ label: displayName, value: displayName }))
+})
+
+const categoryOptions = computed(() => {
+  const categories = new Set<string>()
+  torrents.value.forEach((torrent) => {
+    if (torrent.category) {
+      categories.add(torrent.category)
+    }
+  })
+  const result = Array.from(categories).sort()
+  // 检查是否有无分类的种子
+  const hasUncategorized = torrents.value.some(t => !t.category)
+  if (hasUncategorized) {
+    result.unshift('无分类')
+  }
+  return result.map((cat) => ({ label: cat, value: cat }))
 })
 
 const selectedIds = computed(() => selectedTorrents.value.map((torrent) => torrent.id))
@@ -1349,6 +1425,7 @@ const handleContextAction = (
     | 'location'
     | 'detail'
     | 'limit'
+    | 'category'
 ) => {
   const torrent = contextMenu.value.torrent
   if (!torrent) return
@@ -1375,6 +1452,10 @@ const handleContextAction = (
   }
   if (action === 'location') {
     openLocationDialog(torrent)
+    return
+  }
+  if (action === 'category') {
+    openCategoryDialog(torrent)
     return
   }
   if (action === 'detail') {
@@ -1456,6 +1537,47 @@ const submitLocationChange = async () => {
   } catch (error: any) {
     ElMessage.error(`变更失败: ${error.message}`)
   }
+}
+
+const openCategoryDialog = async (torrent: Torrent) => {
+  categoryTarget.value = torrent
+  categoryForm.value.category = torrent.category || ''
+  showCategoryDialog.value = true
+  // 加载可用分类列表
+  if (api.getCategories) {
+    try {
+      availableCategories.value = await api.getCategories()
+    } catch (error: any) {
+      console.error('加载分类列表失败:', error)
+    }
+  }
+}
+
+const submitCategoryChange = async () => {
+  if (!categoryTarget.value) {
+    showCategoryDialog.value = false
+    return
+  }
+  const category = categoryForm.value.category.trim()
+  try {
+    if (api.setTorrentCategory) {
+      await api.setTorrentCategory([categoryTarget.value.id], category)
+      ElMessage.success('分类已更新')
+      showCategoryDialog.value = false
+      loadTorrents()
+    } else {
+      ElMessage.warning('当前客户端不支持设置分类')
+    }
+  } catch (error: any) {
+    ElMessage.error(`设置分类失败: ${error.message}`)
+  }
+}
+
+const searchCategory = (queryString: string, cb: (results: any[]) => void) => {
+  const results = availableCategories.value
+    .filter(cat => !queryString || cat.toLowerCase().includes(queryString.toLowerCase()))
+    .map(cat => ({ value: cat }))
+  cb(results)
 }
 
 const fetchTorrentDetail = async (id: number) => {

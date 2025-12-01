@@ -10,7 +10,6 @@ class TransmissionClient {
 
   constructor(baseURL: string = torrentApiBase) {
     this.sessionId = this.loadStoredSessionId()
-
     this.client = axios.create({
       baseURL,
       headers: {
@@ -53,12 +52,6 @@ class TransmissionClient {
     this.client.defaults.auth = { username, password }
   }
 
-  setBaseUrl(url: string) {
-    if (url && url !== this.client.defaults.baseURL) {
-      this.client.defaults.baseURL = url
-      this.clearSession()
-    }
-  }
 
   clearAuth() {
     this.client.defaults.auth = undefined

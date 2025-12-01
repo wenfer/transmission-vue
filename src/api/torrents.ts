@@ -34,9 +34,8 @@ let qbAuthenticated = false
 const configureConnectionInternal = (config: Partial<ServerConfig>) => {
   currentConnection = { ...currentConnection, ...config }
   if (isTransmission) {
-    if (currentConnection.url) {
-      transmissionClient.setBaseUrl(currentConnection.url)
-    }
+    console.log(currentConnection)
+    console.log(transmissionClient)
     if (currentConnection.username || currentConnection.password) {
       transmissionClient.setAuth(currentConnection.username, currentConnection.password)
     } else {
@@ -76,6 +75,8 @@ interface TorrentService {
   reannounceTorrents(ids: number[]): Promise<void>
   setTorrentLocation(ids: number[], location: string, move?: boolean): Promise<void>
   setTorrents(ids: number[], params: Record<string, any>): Promise<void>
+  setTorrentCategory?(ids: number[], category: string): Promise<void>
+  getCategories?(): Promise<string[]>
   getSessionStats(): Promise<SessionStats>
   getSession(): Promise<SessionConfig>
   setSession(config: Partial<SessionConfig>): Promise<void>
@@ -112,6 +113,7 @@ const transmissionService: TorrentService = {
       'activityDate',
       'labels',
       'peers',
+      'comment',
     ]
 
     const payload: Record<string, any> = {
@@ -123,7 +125,7 @@ const transmissionService: TorrentService = {
     }
 
     return transmissionClient.request<{ torrents: Torrent[] }>('torrent-get', payload).then(result => {
-      // 为每个种子计算流行度
+      // 为每个种子计算流行度并提取分类信息
       if (result.torrents) {
         result.torrents.forEach(torrent => {
           torrent.popularity = calculatePopularity(
@@ -131,6 +133,13 @@ const transmissionService: TorrentService = {
             torrent.addedDate,
             torrent.activityDate
           )
+          // 从标签中提取分类信息（使用 "category:" 前缀）
+          if (torrent.labels && torrent.labels.length > 0) {
+            const categoryLabel = torrent.labels.find(label => label.startsWith('category:'))
+            if (categoryLabel) {
+              torrent.category = categoryLabel.substring('category:'.length)
+            }
+          }
         })
       }
       return result
@@ -215,6 +224,61 @@ const transmissionService: TorrentService = {
   async testConnection() {
     await transmissionClient.request('session-get')
   },
+
+  async setTorrentCategory(ids, category) {
+    console.log('[Transmission] setTorrentCategory called:', { ids, category })
+
+    // 获取当前种子的 ID 和标签
+    const result = await transmissionClient.request<{ torrents: Torrent[] }>('torrent-get', {
+      ids,
+      fields: ['id', 'labels']
+    })
+
+    console.log('[Transmission] Current torrents:', result.torrents.map(t => ({
+      id: t.id,
+      labels: t.labels
+    })))
+
+    for (const torrent of result.torrents) {
+      // 移除旧的分类标签
+      const newLabels = (torrent.labels || []).filter(label => !label.startsWith('category:'))
+      // 添加新的分类标签（如果category不为空）
+      if (category) {
+        newLabels.push(`category:${category}`)
+      }
+
+      console.log('[Transmission] Updating torrent:', {
+        id: torrent.id,
+        oldLabels: torrent.labels,
+        newLabels
+      })
+
+      // 更新标签
+      await transmissionClient.request('torrent-set', {
+        ids: [torrent.id],
+        labels: newLabels
+      })
+    }
+
+    console.log('[Transmission] Category update complete')
+  },
+
+  async getCategories() {
+    const result = await transmissionClient.request<{ torrents: Torrent[] }>('torrent-get', {
+      fields: ['labels']
+    })
+    const categories = new Set<string>()
+    result.torrents.forEach(torrent => {
+      if (torrent.labels) {
+        torrent.labels.forEach(label => {
+          if (label.startsWith('category:')) {
+            categories.add(label.substring('category:'.length))
+          }
+        })
+      }
+    })
+    return Array.from(categories)
+  },
 }
 
 interface QBTorrentInfo {
@@ -262,6 +326,25 @@ interface QBTracker {
   num_leeches: number
   num_downloaded: number
   msg: string
+}
+
+interface QBTorrentProperties {
+  save_path?: string
+  creation_date?: number
+  piece_size?: number
+  comment?: string
+  total_wasted?: number
+  total_uploaded?: number
+  total_uploaded_session?: number
+  total_downloaded?: number
+  total_downloaded_session?: number
+  up_limit?: number
+  dl_limit?: number
+  time_elapsed?: number
+  seeding_time?: number
+  nb_connections?: number
+  nb_connections_limit?: number
+  share_ratio?: number
 }
 
 interface QBTransferInfo {
@@ -441,7 +524,7 @@ const resolveQbStatus = (state: string): TorrentStatus => {
   return result
 }
 
-const mapQBTorrent = (item: QBTorrentInfo): Torrent => {
+const mapQBTorrent = (item: QBTorrentInfo, properties?: QBTorrentProperties): Torrent => {
   const id = registerQbHash(item.hash)
   const status = resolveQbStatus(item.state)
   const labels: string[] = []
@@ -490,6 +573,7 @@ const mapQBTorrent = (item: QBTorrentInfo): Torrent => {
     downloadedEver: item.downloaded,
     activityDate: item.last_activity,
     labels,
+    category: item.category || undefined,
     trackers,
     trackerStats: item.num_complete !== undefined || item.num_incomplete !== undefined
       ? [
@@ -506,6 +590,7 @@ const mapQBTorrent = (item: QBTorrentInfo): Torrent => {
     uploadLimited: uploadLimit > 0,
     isPrivate: false,
     popularity,
+    comment: properties?.comment || undefined,
   }
 }
 
@@ -576,16 +661,20 @@ const qbittorrentService: TorrentService = {
     }
     const mapped: Torrent[] = []
     for (const info of torrents) {
-      const torrent = mapQBTorrent(info)
+      let torrent: Torrent
       if (options?.ids?.length) {
-        const [files, qbTrackers] = await Promise.all([
+        const [files, qbTrackers, properties] = await Promise.all([
           qbittorrentClient.get<QBTorrentFile[]>(
             `/torrents/files?hash=${encodeURIComponent(info.hash)}`
           ),
           qbittorrentClient.get<QBTracker[]>(
             `/torrents/trackers?hash=${encodeURIComponent(info.hash)}`
           ),
+          qbittorrentClient.get<QBTorrentProperties>(
+            `/torrents/properties?hash=${encodeURIComponent(info.hash)}`
+          ),
         ])
+        torrent = mapQBTorrent(info, properties)
         const torrentFiles: TorrentFile[] = files.map((file) => ({
           name: file.name,
           length: file.size,
@@ -617,6 +706,8 @@ const qbittorrentService: TorrentService = {
               leecherCount: t.num_leeches,
             }))
         }
+      } else {
+        torrent = mapQBTorrent(info)
       }
       mapped.push(torrent)
     }
@@ -923,6 +1014,21 @@ const qbittorrentService: TorrentService = {
     await qbEnsureAuth()
     await qbittorrentClient.get('/transfer/info')
   },
+
+  async setTorrentCategory(ids, category) {
+    await qbEnsureAuth()
+    const hashes = await qbResolveHashes(ids)
+    if (!hashes.length) return
+    await qbittorrentClient.post(
+      `/torrents/setCategory?hashes=${encodeURIComponent(hashes.join('|'))}&category=${encodeURIComponent(category)}`
+    )
+  },
+
+  async getCategories() {
+    await qbEnsureAuth()
+    const categories = await qbittorrentClient.get<Record<string, any>>('/torrents/categories')
+    return Object.keys(categories || {})
+  },
 }
 
 const activeService: TorrentService = isTransmission ? transmissionService : qbittorrentService
@@ -952,3 +1058,8 @@ export const testConnection = async (config?: Partial<ServerConfig>) => {
   }
   await activeService.testConnection()
 }
+
+export const setTorrentCategory = (ids: number[], category: string) =>
+  activeService.setTorrentCategory?.(ids, category)
+
+export const getCategories = () => activeService.getCategories?.()

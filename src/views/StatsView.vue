@@ -174,7 +174,7 @@ import * as api from '@/api/torrents'
 import { torrentBackendName } from '@/config/torrentClient'
 import type { Torrent } from '@/types/transmission'
 import { useSystemStatusStore } from '@/stores/systemStatus'
-import { getTrackerHost } from '@/utils/torrent'
+import { getTrackerHost, getTrackerDisplayName } from '@/utils/torrent'
 
 use([CanvasRenderer, LineChart, BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, TitleComponent])
 
@@ -237,12 +237,24 @@ const trackerStats = computed(() => {
     { tracker: string; uploaded: number; downloaded: number }
   >()
   torrents.value.forEach((torrent) => {
-    const tracker = torrent.trackers?.[0]
-    const host = tracker ? getTrackerHost(tracker.announce) : '未设置'
-    if (!trackerMap.has(host)) {
-      trackerMap.set(host, { tracker: host, uploaded: 0, downloaded: 0 })
+    // 优先选择第一个汇报成功的tracker
+    let tracker = null
+    if (torrent.trackerStats && torrent.trackerStats.length > 0) {
+      const successTracker = torrent.trackerStats.find(stat => stat.lastAnnounceSucceeded)
+      if (successTracker) {
+        tracker = torrent.trackers?.find(t => t.announce === successTracker.announce)
+      }
     }
-    const entry = trackerMap.get(host)!
+    // 如果没有汇报成功的，则使用第一个tracker
+    if (!tracker) {
+      tracker = torrent.trackers?.[0]
+    }
+
+    const displayName = tracker ? getTrackerDisplayName(tracker.announce) : '未设置'
+    if (!trackerMap.has(displayName)) {
+      trackerMap.set(displayName, { tracker: displayName, uploaded: 0, downloaded: 0 })
+    }
+    const entry = trackerMap.get(displayName)!
     entry.uploaded += torrent.uploadedEver || 0
     entry.downloaded += torrent.downloadedEver || 0
   })
