@@ -174,7 +174,7 @@ import * as api from '@/api/torrents'
 import { torrentBackendName } from '@/config/torrentClient'
 import type { Torrent } from '@/types/transmission'
 import { useSystemStatusStore } from '@/stores/systemStatus'
-import { getTrackerHost, getTrackerDisplayName } from '@/utils/torrent'
+import { getTrackerDisplayName } from '@/utils/torrent'
 
 use([CanvasRenderer, LineChart, BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, TitleComponent])
 

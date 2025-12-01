@@ -691,11 +691,10 @@ import * as api from '@/api/torrents'
 import type { AddTorrentPayload } from '@/api/torrents'
 import type { Torrent, TorrentStatus } from '@/types/transmission'
 import { TorrentStatusEnum } from '@/types/transmission'
-import { getTrackerHost, getTrackerDisplayName, matchesTrackerFilter } from '@/utils/torrent'
+import { getTrackerDisplayName, matchesTrackerFilter } from '@/utils/torrent'
 import { useMediaQuery } from '@/utils/useMediaQuery'
 import { useFilterStore } from '@/stores/filter'
 import { storeToRefs } from 'pinia'
-import { isQbittorrent } from '@/config/torrentClient'
 
 const REFRESH_INTERVAL = 3000
 const COLUMN_WIDTH_STORAGE_KEY = 'tv_table_column_widths'
@@ -1070,13 +1069,12 @@ const trackerOptions = computed(() => {
   torrents.value.forEach((torrent) => {
     torrent.trackers?.forEach((tracker) => {
       const displayName = getTrackerDisplayName(tracker.announce)
-      const host = getTrackerHost(tracker.announce)
       trackerMap.set(displayName, displayName)
     })
   })
   return Array.from(trackerMap.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([displayName, value]) => ({ label: displayName, value: displayName }))
+    .map(([displayName]) => ({ label: displayName, value: displayName }))
 })
 
 const categoryOptions = computed(() => {
@@ -1546,7 +1544,7 @@ const openCategoryDialog = async (torrent: Torrent) => {
   // 加载可用分类列表
   if (api.getCategories) {
     try {
-      availableCategories.value = await api.getCategories()
+      availableCategories.value = (await api.getCategories()) ?? []
     } catch (error: any) {
       console.error('加载分类列表失败:', error)
     }
