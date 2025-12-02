@@ -1,3 +1,18 @@
+# 说明 (这部分是人工编写的)
+由于找不到比较趁手的ui界面，就用ai生成撸了一个，以下说明90%以上是ai生成的，但是信息足够新手起步了
+
+原则上来说，是不应该重复造轮子的，但是ai生成成本太低了，也顺带着学习了下如何使用ai生成
+
+有的人不会更换webui，我使用transmission-4.0.5的官方镜像，重新构建了镜像，需要的自己参考下方，如果不喜欢4.0.5，就自己替换webui
+
+本身是为了transmission做的，一想着，反正是ai生成，兼容个qbittorrent，给ai上点压力，好在大部分功能都实现了
+
+使用中有bug，或者缺少功能，都可以提issues
+
+对了，public目录下有个trackerSites.json，配置了tracker和站点名称的映射，用于把网址显示成站点名称，方便统计的时候查看数据
+
+我只配置了我有多一些站，欢迎补充
+
 # BitCake 🍰
 
 A modern, unified web interface for Transmission and qBittorrent.

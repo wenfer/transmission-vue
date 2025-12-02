@@ -9,16 +9,16 @@
     {
       "name": "财神",
       "trackers": [
-        "cspt.top",
-        "cspt.cc",
-        "cspt.date",
-        "cspt.top"
+        "tracker.cspt.top",
+        "tracker.cspt.cc",
+        "tracker.cspt.date",
+        "tracker.cspt.top"
       ]
     },
     {
       "name": "春天",
       "trackers": [
-        "springsunday.net"
+        "on.springsunday.net"
       ]
     },
     {
@@ -139,7 +139,9 @@
     {
       "name": "青蛙",
       "trackers": [
-        "tracker.qingwa.pro"
+        "tracker.qingwa.pro",
+        "tracker.qingwapt.com",
+        "tracker.qingwapt.org"
       ]
     }
   ]

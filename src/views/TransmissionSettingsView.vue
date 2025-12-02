@@ -7,6 +7,8 @@
           <div class="header-actions">
             <el-button type="primary" size="small" @click="saveSettings">保存设置</el-button>
             <el-button size="small" @click="loadSettings">重置</el-button>
+            <el-button size="small" @click="exportSettings">导出配置</el-button>
+            <el-button size="small" @click="importSettings">导入配置</el-button>
           </div>
         </div>
       </template>
@@ -459,11 +461,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import * as api from '@/api/torrents'
 import { isTransmission, torrentBackendName } from '@/config/torrentClient'
 import type { SessionConfig } from '@/types/transmission'
 import { useMediaQuery } from '@/utils/useMediaQuery'
+import { exportConfig, importConfig, filterConfig } from '@/utils/configExportImport'
 
 const loading = ref(false)
 const settings = ref<Partial<SessionConfig>>({})
@@ -652,6 +655,82 @@ const handleTestPort = async () => {
     ElMessage.error(`测试失败: ${error.message || error}`)
   } finally {
     testingPort.value = false
+  }
+}
+
+/**
+ * 导出当前配置
+ */
+const exportSettings = () => {
+  try {
+    // 提取可编辑字段的配置
+    const config: Record<string, any> = {}
+    editableFields.forEach((key) => {
+      const value = settings.value[key]
+      if (value !== undefined) {
+        config[key as string] = value
+      }
+    })
+
+    // 添加元数据
+    const exportData = {
+      _metadata: {
+        exportTime: new Date().toISOString(),
+        client: 'Transmission',
+        version: settings.value.version || 'unknown',
+      },
+      config,
+    }
+
+    // 生成文件名：transmission-config-YYYYMMDD-HHMMSS.json
+    const now = new Date()
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+    const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '')
+    const filename = `transmission-config-${dateStr}-${timeStr}`
+
+    exportConfig(exportData, filename)
+    ElMessage.success('配置已导出')
+  } catch (error: any) {
+    ElMessage.error(`导出失败: ${error.message || '未知错误'}`)
+  }
+}
+
+/**
+ * 导入配置
+ */
+const importSettings = async () => {
+  try {
+    const data = await importConfig()
+
+    // 验证数据格式
+    if (!data.config || typeof data.config !== 'object') {
+      ElMessage.error('配置文件格式无效')
+      return
+    }
+
+    // 过滤并验证配置
+    const importedConfig = filterConfig<SessionConfig>(data.config, editableFields)
+
+    // 确认导入
+    await ElMessageBox.confirm(
+      `即将导入配置，这将覆盖当前设置。是否继续？`,
+      '确认导入',
+      {
+        confirmButtonText: '导入',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    // 应用配置
+    Object.assign(settings.value, importedConfig)
+
+    ElMessage.success('配置已导入，请点击"保存设置"以应用')
+  } catch (error: any) {
+    // 用户取消不显示错误
+    if (error.message && !error.message.includes('取消')) {
+      ElMessage.error(`导入失败: ${error.message || '未知错误'}`)
+    }
   }
 }
 

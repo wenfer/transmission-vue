@@ -574,6 +574,14 @@
                     border
                     max-height="400"
                   >
+                    <el-table-column label="国家/地区" width="100" align="center">
+                      <template #default="{ row }">
+                        <span v-if="row.countryFlag" :title="row.country">
+                          {{ row.countryFlag }} {{ row.country }}
+                        </span>
+                        <span v-else style="color: #909399;">-</span>
+                      </template>
+                    </el-table-column>
                     <el-table-column prop="address" label="IP 地址" width="130" />
                     <el-table-column prop="port" label="端口" width="70" align="center" />
                     <el-table-column prop="client" label="客户端" min-width="100" show-overflow-tooltip />
@@ -743,6 +751,7 @@ import type { AddTorrentPayload } from '@/api/torrents'
 import type { Torrent, TorrentStatus } from '@/types/transmission'
 import { TorrentStatusEnum } from '@/types/transmission'
 import { getTrackerDisplayName, matchesTrackerFilter } from '@/utils/torrent'
+import { getIPGeolocation } from '@/utils/ipGeolocation'
 import { useMediaQuery } from '@/utils/useMediaQuery'
 import { useFilterStore } from '@/stores/filter'
 import { storeToRefs } from 'pinia'
@@ -872,6 +881,8 @@ const detailPeers = ref<Array<{
   rateToClient: number
   rateToPeer: number
   flagStr: string
+  country?: string
+  countryFlag?: string
 }>>([])
 const tableRef = ref<TableInstance | null>(null)
 const suppressSelectionChange = ref(false)
@@ -1723,11 +1734,12 @@ const fetchTorrentDetail = async (id: number) => {
   return result.torrents[0] || null
 }
 
-const applyDetailData = (torrent: Torrent) => {
+const applyDetailData = async (torrent: Torrent) => {
   detailTorrent.value = torrent
   initializeDetailFileSelections()
   // 处理 peers 数据
   if (torrent.peers && torrent.peers.length > 0) {
+    // 先立即显示基本信息
     detailPeers.value = torrent.peers.map((peer) => ({
       address: peer.address,
       port: peer.port,
@@ -1737,6 +1749,15 @@ const applyDetailData = (torrent: Torrent) => {
       rateToPeer: peer.rateToPeer,
       flagStr: peer.flagStr || '',
     }))
+
+    // 异步查询地理位置信息
+    torrent.peers.forEach(async (peer, index) => {
+      const geoInfo = await getIPGeolocation(peer.address)
+      if (geoInfo && detailPeers.value[index]) {
+        detailPeers.value[index].country = geoInfo.country
+        detailPeers.value[index].countryFlag = geoInfo.flag
+      }
+    })
   } else {
     detailPeers.value = []
   }
