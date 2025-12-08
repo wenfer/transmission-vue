@@ -121,7 +121,7 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { Setting, List, TrendCharts, Menu, SwitchButton, Sunny } from '@element-plus/icons-vue'
+import { Setting, List, TrendCharts, Menu, SwitchButton, Sunny, Connection } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { useSystemStatusStore } from '@/stores/systemStatus'
 import { useConnectionStore } from '@/stores/connection'
@@ -197,6 +197,7 @@ const getTorrentCount = (statusValue: StatusFilter): number | string => {
 }
 
 const navigationItems = [
+  { index: '/reseed', label: '辅种管理', icon: Connection },
   { index: '/settings', label: '设置', icon: Setting },
   { index: '/stats', label: '数据统计', icon: TrendCharts },
 ]

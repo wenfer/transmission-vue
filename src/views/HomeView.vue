@@ -112,10 +112,9 @@
           :data="paginatedTorrents"
           stripe
           border
-          style="width: 100%"
+          style="width: 100%; height: 100%"
           row-key="id"
           :reserve-selection="true"
-          height="600"
           @selection-change="handleSelectionChange"
           @sort-change="handleSortChange"
           @row-contextmenu="handleRowContextMenu"
@@ -132,8 +131,7 @@
             prop="name"
             column-key="name"
             label="名称"
-            :width="getColumnWidth('name', isCompactTable ? 260 : 320)"
-            :min-width="240"
+            :min-width="isCompactTable ? 260 : 320"
             sortable="custom"
             show-overflow-tooltip
           />
@@ -2405,19 +2403,35 @@ onBeforeUnmount(() => {
   margin-top: 20px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .table-scroll {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   border-radius: 6px;
   background: #fff;
-  -webkit-overflow-scrolling: touch;
-  min-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .table-scroll :deep(.el-table) {
-  min-width: 1100px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-scroll :deep(.el-table__inner-wrapper) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-scroll :deep(.el-table__body-wrapper) {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .table-scroll :deep(.el-table__row) {
@@ -2621,9 +2635,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1200px) {
-  .table-scroll :deep(.el-table) {
-    min-width: 960px;
-  }
 }
 
 @media (max-width: 1024px) {
@@ -2656,9 +2667,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
-  .table-scroll :deep(.el-table) {
-    min-width: 780px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -2682,10 +2690,6 @@ onBeforeUnmount(() => {
 
   .table-container {
     margin-top: 12px;
-  }
-
-  .table-scroll :deep(.el-table) {
-    min-width: 720px;
   }
 
   .detail-grid {

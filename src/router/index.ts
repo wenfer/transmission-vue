@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/StatsView.vue'),
         meta: { title: '数据统计', requiresAuth: true },
       },
+      {
+        path: 'reseed',
+        name: 'Reseed',
+        component: () => import('@/views/ReseedView.vue'),
+        meta: { title: '辅种管理', requiresAuth: true },
+      },
     ],
   },
   {
