@@ -15,19 +15,37 @@
       </div>
       <div class="header-right">
         <el-dropdown @command="handleThemeChange" trigger="click">
-          <el-button :icon="Sunny" circle plain :title="currentTheme === 'default' ? '切换到蓝白主题' : '切换到默认主题'" />
+          <el-button :icon="Sunny" circle plain title="切换主题" />
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="default" :disabled="currentTheme === 'default'">
-                <span>默认主题</span>
+              <el-dropdown-item
+                command="green"
+                :disabled="currentTheme === 'green'"
+              >
+                <span>清新绿</span>
               </el-dropdown-item>
-              <el-dropdown-item command="blue" :disabled="currentTheme === 'blue'">
-                <span>蓝白主题</span>
+              <el-dropdown-item
+                command="blue"
+                :disabled="currentTheme === 'blue'"
+              >
+                <span>简约蓝</span>
+              </el-dropdown-item>
+              <el-dropdown-item
+                command="pink"
+                :disabled="currentTheme === 'pink'"
+              >
+                <span>可爱粉</span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <el-button :icon="SwitchButton" circle plain @click="handleLogout" title="退出登录" />
+        <el-button
+          :icon="SwitchButton"
+          circle
+          plain
+          @click="handleLogout"
+          title="退出登录"
+        />
       </div>
     </el-header>
 
@@ -118,44 +136,53 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { Setting, List, TrendCharts, Menu, SwitchButton, Sunny, Connection } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
-import { useSystemStatusStore } from '@/stores/systemStatus'
-import { useConnectionStore } from '@/stores/connection'
-import { useFilterStore, type StatusFilter } from '@/stores/filter'
-import { useThemeStore, type ThemeType } from '@/stores/theme'
-import { useMediaQuery } from '@/utils/useMediaQuery'
-import SidebarStatus from './components/SidebarStatus.vue'
-import { torrentBackendName } from '@/config/torrentClient'
-import { TorrentStatusEnum } from '@/types/transmission'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { storeToRefs } from "pinia";
+import {
+  Setting,
+  List,
+  TrendCharts,
+  Menu,
+  SwitchButton,
+  Sunny,
+  Connection,
+} from "@element-plus/icons-vue";
+import { ElMessageBox } from "element-plus";
+import { useSystemStatusStore } from "@/stores/systemStatus";
+import { useConnectionStore } from "@/stores/connection";
+import { useFilterStore, type StatusFilter } from "@/stores/filter";
+import { useThemeStore, type ThemeType } from "@/stores/theme";
+import { useMediaQuery } from "@/utils/useMediaQuery";
+import SidebarStatus from "./components/SidebarStatus.vue";
+import { torrentBackendName } from "@/config/torrentClient";
+import { TorrentStatusEnum } from "@/types/transmission";
 
-const router = useRouter()
-const route = useRoute()
-const systemStatusStore = useSystemStatusStore()
-const connectionStore = useConnectionStore()
-const filterStore = useFilterStore()
-const themeStore = useThemeStore()
-const { torrentCounts } = storeToRefs(systemStatusStore)
-const { currentTheme } = storeToRefs(themeStore)
-const backendLabel = torrentBackendName
-const { sessionStats, freeSpaceBytes, sessionConfig, lastUpdated } = storeToRefs(systemStatusStore)
-const { statusFilter } = storeToRefs(filterStore)
-const isMobile = useMediaQuery('(max-width: 768px)')
-const isMenuOpen = ref(false)
-const activeMenuItem = ref('/')
+const router = useRouter();
+const route = useRoute();
+const systemStatusStore = useSystemStatusStore();
+const connectionStore = useConnectionStore();
+const filterStore = useFilterStore();
+const themeStore = useThemeStore();
+const { torrentCounts } = storeToRefs(systemStatusStore);
+const { currentTheme } = storeToRefs(themeStore);
+const backendLabel = torrentBackendName;
+const { sessionStats, freeSpaceBytes, sessionConfig, lastUpdated } =
+  storeToRefs(systemStatusStore);
+const { statusFilter } = storeToRefs(filterStore);
+const isMobile = useMediaQuery("(max-width: 768px)");
+const isMenuOpen = ref(false);
+const activeMenuItem = ref("/");
 
 const statusTextMap = {
-  [TorrentStatusEnum.STOPPED]: '已停止',
-  [TorrentStatusEnum.CHECK_WAIT]: '等待校验',
-  [TorrentStatusEnum.CHECK]: '校验中',
-  [TorrentStatusEnum.DOWNLOAD_WAIT]: '等待下载',
-  [TorrentStatusEnum.DOWNLOAD]: '下载中',
-  [TorrentStatusEnum.SEED_WAIT]: '等待做种',
-  [TorrentStatusEnum.SEED]: '做种中',
-}
+  [TorrentStatusEnum.STOPPED]: "已停止",
+  [TorrentStatusEnum.CHECK_WAIT]: "等待校验",
+  [TorrentStatusEnum.CHECK]: "校验中",
+  [TorrentStatusEnum.DOWNLOAD_WAIT]: "等待下载",
+  [TorrentStatusEnum.DOWNLOAD]: "下载中",
+  [TorrentStatusEnum.SEED_WAIT]: "等待做种",
+  [TorrentStatusEnum.SEED]: "做种中",
+};
 
 // interface StatusOption {
 //   label: string
@@ -164,154 +191,162 @@ const statusTextMap = {
 // }
 
 const statusOptions = [
-  { label: '全部', value: 'all' as StatusFilter },
-  { label: statusTextMap[TorrentStatusEnum.DOWNLOAD], value: TorrentStatusEnum.DOWNLOAD as StatusFilter },
-  { label: statusTextMap[TorrentStatusEnum.STOPPED], value: TorrentStatusEnum.STOPPED as StatusFilter },
-  { label: '队列中', value: 'queued' as StatusFilter },
-  { label: statusTextMap[TorrentStatusEnum.CHECK], value: TorrentStatusEnum.CHECK as StatusFilter },
-  { label: '做种中', value: TorrentStatusEnum.SEED as StatusFilter },
-  { label: '活动中', value: 'active' as StatusFilter },
-  { label: '错误', value: 'error' as StatusFilter },
-]
+  { label: "全部", value: "all" as StatusFilter },
+  {
+    label: statusTextMap[TorrentStatusEnum.DOWNLOAD],
+    value: TorrentStatusEnum.DOWNLOAD as StatusFilter,
+  },
+  {
+    label: statusTextMap[TorrentStatusEnum.STOPPED],
+    value: TorrentStatusEnum.STOPPED as StatusFilter,
+  },
+  { label: "队列中", value: "queued" as StatusFilter },
+  {
+    label: statusTextMap[TorrentStatusEnum.CHECK],
+    value: TorrentStatusEnum.CHECK as StatusFilter,
+  },
+  { label: "做种中", value: TorrentStatusEnum.SEED as StatusFilter },
+  { label: "活动中", value: "active" as StatusFilter },
+  { label: "错误", value: "error" as StatusFilter },
+];
 
 const getTorrentCount = (statusValue: StatusFilter): number | string => {
   // Direct mapping from status values to count keys
   const countKeyMap: Record<string, string> = {
-    'all': 'all',
-    [TorrentStatusEnum.DOWNLOAD]: 'downloading',
-    [TorrentStatusEnum.STOPPED]: 'paused',
-    [TorrentStatusEnum.CHECK]: 'checking',
-    [TorrentStatusEnum.SEED]: 'seeding',
-    'queued': 'queued',
-    'active': 'active',
-    'error': 'error'
-  }
-  
+    all: "all",
+    [TorrentStatusEnum.DOWNLOAD]: "downloading",
+    [TorrentStatusEnum.STOPPED]: "paused",
+    [TorrentStatusEnum.CHECK]: "checking",
+    [TorrentStatusEnum.SEED]: "seeding",
+    queued: "queued",
+    active: "active",
+    error: "error",
+  };
+
   // Special case for seeding - show seeding count with active count in parentheses
   if (statusValue === TorrentStatusEnum.SEED) {
-    return `${torrentCounts.value['seeding'] || 0}`
+    return `${torrentCounts.value["seeding"] || 0}`;
   }
-  
-  const countKey = countKeyMap[String(statusValue)]
-  return countKey ? (torrentCounts.value[countKey] || 0) : 0
-}
+
+  const countKey = countKeyMap[String(statusValue)];
+  return countKey ? torrentCounts.value[countKey] || 0 : 0;
+};
 
 const navigationItems = [
-  { index: '/reseed', label: '辅种管理', icon: Connection },
-  { index: '/settings', label: '设置', icon: Setting },
-  { index: '/stats', label: '数据统计', icon: TrendCharts },
-]
+  { index: "/reseed", label: "辅种管理", icon: Connection },
+  { index: "/settings", label: "设置", icon: Setting },
+  { index: "/stats", label: "数据统计", icon: TrendCharts },
+];
 
 // const themeOptions = Object.entries(themeStore.themes).map(([key, theme]) => ({
 //   label: theme.name,
 //   value: key
 // }))
 
-const uploadSpeedText = computed(() => formatSpeed(sessionStats.value?.uploadSpeed || 0))
-const downloadSpeedText = computed(() => formatSpeed(sessionStats.value?.downloadSpeed || 0))
+const uploadSpeedText = computed(() =>
+  formatSpeed(sessionStats.value?.uploadSpeed || 0)
+);
+const downloadSpeedText = computed(() =>
+  formatSpeed(sessionStats.value?.downloadSpeed || 0)
+);
 const freeSpaceText = computed(() =>
-  freeSpaceBytes.value !== null ? formatBytes(freeSpaceBytes.value) : '未知'
-)
-const versionText = computed(() => sessionConfig.value?.version || '')
-const lastUpdatedText = computed(() => lastUpdated.value || '—')
-const frontendVersion = __APP_VERSION__ || 'dev'
+  freeSpaceBytes.value !== null ? formatBytes(freeSpaceBytes.value) : "未知"
+);
+const versionText = computed(() => sessionConfig.value?.version || "");
+const lastUpdatedText = computed(() => lastUpdated.value || "—");
+const frontendVersion = __APP_VERSION__ || "dev";
 const statusMetrics = computed(() => [
-  { label: '上传速度', value: uploadSpeedText.value },
-  { label: '下载速度', value: downloadSpeedText.value },
-  { label: '可用空间', value: freeSpaceText.value },
-  { label: '更新时间', value: lastUpdatedText.value },
-  { label: '前端版本', value: `v${frontendVersion}` },
-])
+  { label: "上传速度", value: uploadSpeedText.value },
+  { label: "下载速度", value: downloadSpeedText.value },
+  { label: "可用空间", value: freeSpaceText.value },
+  { label: "更新时间", value: lastUpdatedText.value },
+  { label: "前端版本", value: `v${frontendVersion}` },
+]);
 
 // 根据当前路由和过滤器状态计算当前活动的菜单项
 const updateActiveMenuItem = () => {
-  if (route.path === '/') {
-    activeMenuItem.value = `status:${statusFilter.value}`
+  if (route.path === "/") {
+    activeMenuItem.value = `status:${statusFilter.value}`;
   } else {
-    activeMenuItem.value = route.path
+    activeMenuItem.value = route.path;
   }
-}
+};
 
-watch([() => route.path, statusFilter], updateActiveMenuItem)
+watch([() => route.path, statusFilter], updateActiveMenuItem);
 
 watch(isMobile, (mobile) => {
   if (!mobile) {
-    isMenuOpen.value = false
+    isMenuOpen.value = false;
   }
-})
+});
 
 const handleMenuSelect = (index: string) => {
   // 处理状态过滤
-  if (index.startsWith('status:')) {
-    const status = index.replace('status:', '') as StatusFilter
-    filterStore.setStatusFilter(status)
-    filterStore.setTrackerFilter('')
-    if (route.path !== '/') {
-      router.push('/')
+  if (index.startsWith("status:")) {
+    const status = index.replace("status:", "") as StatusFilter;
+    filterStore.setStatusFilter(status);
+    filterStore.setTrackerFilter("");
+    if (route.path !== "/") {
+      router.push("/");
     }
   }
   // 处理普通路由
   else {
-    router.push(index)
+    router.push(index);
   }
 
   if (isMobile.value) {
-    isMenuOpen.value = false
+    isMenuOpen.value = false;
   }
-}
+};
 
 onMounted(() => {
-  systemStatusStore.start()
-  updateActiveMenuItem()
-  themeStore.loadTheme()
-})
+  systemStatusStore.start();
+  updateActiveMenuItem();
+  themeStore.loadTheme();
+});
 
 onBeforeUnmount(() => {
-  systemStatusStore.stop()
-})
+  systemStatusStore.stop();
+});
 
 const handleThemeChange = (theme: string) => {
-  themeStore.setTheme(theme as ThemeType)
-}
+  themeStore.setTheme(theme as ThemeType);
+};
 
 const handleLogout = async () => {
   try {
-    await ElMessageBox.confirm(
-      '确定要退出登录吗？',
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
-    )
+    await ElMessageBox.confirm("确定要退出登录吗？", "提示", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
 
     // 停止定时刷新
-    systemStatusStore.stop()
+    systemStatusStore.stop();
 
     // 清除连接状态
-    connectionStore.setConnected(false)
+    connectionStore.setConnected(false);
 
     // 跳转到登录页
-    router.push('/login')
+    router.push("/login");
   } catch (error) {
     // 用户取消
   }
-}
+};
 
 const formatBytes = (bytes: number): string => {
-  if (!bytes) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
-}
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+};
 
 const formatSpeed = (bytes: number): string => {
-  if (!bytes) return '0 B/s'
-  return `${formatBytes(bytes)}/s`
-}
-
+  if (!bytes) return "0 B/s";
+  return `${formatBytes(bytes)}/s`;
+};
 </script>
 
 <style scoped>

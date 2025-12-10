@@ -1,19 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
-export type ThemeType = 'default' | 'blue'
+export type ThemeType = 'green' | 'blue' | 'pink'
 
 export const useThemeStore = defineStore('theme', () => {
-  const currentTheme = ref<ThemeType>('default')
+  const currentTheme = ref<ThemeType>('green')
 
   // 从 localStorage 加载主题
   const loadTheme = () => {
-    const savedTheme = localStorage.getItem('app-theme') as ThemeType | 'fresh'
-    // 兼容旧的 'fresh' 主题名称，转换为新的 'default'
-    if (savedTheme === 'fresh') {
-      currentTheme.value = 'default'
-      localStorage.setItem('app-theme', 'default')
-    } else if (savedTheme === 'default' || savedTheme === 'blue') {
+    const savedTheme = localStorage.getItem('app-theme') as ThemeType | 'fresh' | 'default'
+    // 兼容旧的主题名称
+    if (savedTheme === 'fresh' || savedTheme === 'default') {
+      currentTheme.value = 'green'
+      localStorage.setItem('app-theme', 'green')
+    } else if (savedTheme === 'green' || savedTheme === 'blue' || savedTheme === 'pink') {
       currentTheme.value = savedTheme
       applyTheme(savedTheme)
     }

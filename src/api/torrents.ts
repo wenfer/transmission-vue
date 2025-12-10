@@ -153,7 +153,7 @@ const transmissionService: TorrentService = {
       paused: payload.paused ?? false,
     }
     if (payload.downloadDir) {
-      params.downloadDir = payload.downloadDir
+      params['download-dir'] = payload.downloadDir
     }
     if (payload.magnet) {
       params.filename = payload.magnet

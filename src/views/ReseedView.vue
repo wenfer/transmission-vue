@@ -23,6 +23,7 @@
       style="width: 100%"
       :height="tableHeight"
       stripe
+      row-key="hashString"
       @sort-change="handleSortChange"
     >
       <el-table-column
@@ -63,7 +64,7 @@
         <template #default="{ row }">
           <div class="tracker-tags">
             <el-tag
-              v-for="tracker in row.trackers"
+              v-for="tracker in row.trackers.slice(0, 5)"
               :key="tracker.announce"
               :type="getTrackerTagType(tracker)"
               class="tracker-tag"
@@ -73,6 +74,14 @@
               <span v-if="tracker.statusText" class="tracker-status">
                 ({{ tracker.statusText }})
               </span>
+            </el-tag>
+            <el-tag
+              v-if="row.trackers.length > 5"
+              type="info"
+              size="small"
+              class="tracker-tag"
+            >
+              +{{ row.trackers.length - 5 }}
             </el-tag>
           </div>
         </template>
@@ -244,12 +253,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { useSystemStatusStore } from '@/stores/systemStatus'
 import { getTrackerDisplayName } from '@/utils/torrent'
 import type { Torrent, TorrentStatus } from '@/types/torrent'
 import { TorrentStatusEnum } from '@/types/torrent'
+
+// 防抖函数
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timeoutId: number | null = null
+  return function (this: any, ...args: Parameters<T>) {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+    timeoutId = window.setTimeout(() => {
+      fn.apply(this, args)
+    }, delay)
+  } as T
+}
 
 interface ReseedTracker {
   announce: string
@@ -282,6 +304,7 @@ interface ReseedData {
 
 const systemStatusStore = useSystemStatusStore()
 const searchKeyword = ref('')
+const debouncedSearchKeyword = ref('')
 const filterMode = ref<'all' | 'reseed'>('all')
 const reseedData = ref<ReseedData[]>([])
 const detailDialogVisible = ref(false)
@@ -289,7 +312,24 @@ const selectedReseed = ref<ReseedData | null>(null)
 const sortProp = ref('trackerCount')
 const sortOrder = ref<'ascending' | 'descending'>('descending')
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(50) // 增加默认每页大小，减少页面切换
+
+// 缓存上次的种子数据指纹，用于判断是否需要重新计算
+const lastTorrentsFingerprint = ref('')
+
+// 计算种子数据指纹（使用简单高效的方式）
+const getTorrentsFingerprint = (torrents: Torrent[]): string => {
+  // 只使用种子数量和前后几个种子的 hash 作为指纹，避免遍历所有种子
+  const count = torrents.length
+  if (count === 0) return '0'
+  if (count <= 3) {
+    return `${count}-${torrents.map(t => t.hashString).join(',')}`
+  }
+  // 对于大量种子，只取前 3 个和后 3 个的 hash
+  const first3 = torrents.slice(0, 3).map(t => t.hashString).join(',')
+  const last3 = torrents.slice(-3).map(t => t.hashString).join(',')
+  return `${count}-${first3}-${last3}`
+}
 
 const tableHeight = computed(() => {
   return window.innerHeight - 260
@@ -299,6 +339,16 @@ const tableHeight = computed(() => {
 const loadReseedData = () => {
   const torrents = systemStatusStore.torrents
 
+  // 计算当前种子数据指纹
+  const currentFingerprint = getTorrentsFingerprint(torrents)
+
+  // 如果数据没有变化，跳过重新计算
+  if (currentFingerprint === lastTorrentsFingerprint.value && reseedData.value.length > 0) {
+    console.log('种子数据未变化，跳过重新计算')
+    return
+  }
+
+  lastTorrentsFingerprint.value = currentFingerprint
   console.log('总种子数量:', torrents.length)
 
   // 按照文件名+文件大小分组（辅种判定规则）
@@ -385,9 +435,9 @@ const filteredReseedData = computed(() => {
     data = data.filter(item => item.trackerCount > 1)
   }
 
-  // 搜索过滤
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
+  // 搜索过滤（使用防抖后的搜索关键词）
+  if (debouncedSearchKeyword.value) {
+    const keyword = debouncedSearchKeyword.value.toLowerCase()
     data = data.filter(item =>
       item.fileName.toLowerCase().includes(keyword)
     )
@@ -494,15 +544,25 @@ const showReseedDetails = (reseed: ReseedData) => {
   detailDialogVisible.value = true
 }
 
+// 监听搜索关键词变化，使用防抖
+const debouncedSearch = debounce((value: string) => {
+  debouncedSearchKeyword.value = value
+  currentPage.value = 1 // 搜索后回到第一页
+}, 300)
+
+watch(searchKeyword, (newValue) => {
+  debouncedSearch(newValue)
+})
+
 // 定时刷新
 let refreshTimer: number | null = null
 
 onMounted(() => {
   loadReseedData()
-  // 每 5 秒刷新一次
+  // 每 10 秒刷新一次（配合缓存机制，数据未变化时不会重新计算）
   refreshTimer = window.setInterval(() => {
     loadReseedData()
-  }, 5000)
+  }, 10000)
 })
 
 onUnmounted(() => {

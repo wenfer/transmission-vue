@@ -377,11 +377,13 @@
         </el-form-item>
         <el-form-item v-else label="种子文件">
           <el-upload
+            ref="uploadRef"
             class="torrent-file-upload"
             :auto-upload="false"
             :limit="1"
             accept=".torrent"
             :on-change="handleFileChange"
+            :file-list="fileList"
           >
             <el-button :icon="Upload">选择文件</el-button>
           </el-upload>
@@ -889,6 +891,8 @@ const addForm = ref({
   downloadDir: '',
   paused: false,
 })
+const uploadRef = ref()
+const fileList = ref<any[]>([])
 const selectedTorrents = ref<Torrent[]>([])
 const selectedIdsState = ref<number[]>([])
 const showLocationDialog = ref(false)
@@ -2174,6 +2178,18 @@ const handleAddTorrent = async () => {
     await api.addTorrent(payload)
     ElMessage.success('添加成功')
     showAddDialog.value = false
+    // 重置表单数据
+    addForm.value = {
+      type: 'magnet',
+      magnet: '',
+      file: null,
+      downloadDir: '',
+      paused: false,
+    }
+    // 清空文件列表
+    fileList.value = []
+    // 清空上传组件
+    uploadRef.value?.clearFiles()
     loadTorrents()
   } catch (error: any) {
     ElMessage.error(`添加失败: ${error.message}`)

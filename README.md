@@ -1,17 +1,20 @@
-> 项目目前处于开荒阶段，更新可能会比较频繁，请见谅 
+> 专门针对 pt 玩家优化的下载器 webui - 优先支持 transmission - 理论上兼容 qbittorrent
+
+> 项目目前处于开荒阶段，更新可能会比较频繁，请见谅
 
 # 说明 (这部分是人工编写的)
-由于找不到比较趁手的ui界面，就用ai生成撸了一个，以下说明90%以上是ai生成的，但是信息足够新手起步了
 
-原则上来说，是不应该重复造轮子的，但是ai生成成本太低了，也顺带着学习了下如何使用ai生成
+由于找不到比较趁手的 ui 界面，就用 ai 生成撸了一个，以下说明 90%以上是 ai 生成的，但是信息足够新手起步了
 
-有的人不会更换webui，我使用transmission-4.0.5的官方镜像，重新构建了镜像，需要的自己参考下方，如果不喜欢4.0.5，就自己替换webui
+原则上来说，是不应该重复造轮子的，但是 ai 生成成本太低了，也顺带着学习了下如何使用 ai 生成
 
-本身是为了transmission做的，一想着，反正是ai生成，兼容个qbittorrent，给ai上点压力，好在大部分功能都实现了
+有的人不会更换 webui，我使用 transmission-4.0.5 的官方镜像，重新构建了镜像，需要的自己参考下方，如果不喜欢 4.0.5，就自己替换 webui
 
-使用中有bug，或者缺少功能，都可以提issues
+本身是为了 transmission 做的，一想着，反正是 ai 生成，兼容个 qbittorrent，给 ai 上点压力，好在大部分功能都实现了
 
-对了，public目录下有个trackerSites.json，配置了tracker和站点名称的映射，用于把网址显示成站点名称，方便统计的时候查看数据
+使用中有 bug，或者缺少功能，都可以提 issues
+
+对了，public 目录下有个 trackerSites.json，配置了 tracker 和站点名称的映射，用于把网址显示成站点名称，方便统计的时候查看数据
 
 我只配置了我有的一些站，欢迎补充
 
@@ -30,8 +33,6 @@ A modern, unified web interface for Transmission and qBittorrent.
 - 📊 强大的数据统计与可视化功能
 - 🔧 紧凑的布局设计，信息密度更高
 - 🌍 支持中文界面
-
-
 
 ## 🚀 部署
 
@@ -66,23 +67,22 @@ services:
 
 ```
 
-
 ### 部署到 Transmission
 
-1. 从release 下载 Transmission 客户端版本
+1. 从 release 下载 Transmission 客户端版本
 
 2. 解压内容复制到容器目录
 
-3. 通过TRANSMISSION_WEB_HOME环境变量更换webui界面
+3. 通过 TRANSMISSION_WEB_HOME 环境变量更换 webui 界面
+
 ```yml
 environment:
-   - TRANSMISSION_WEB_HOME=/path/to/webui  #UI所在路径
+  - TRANSMISSION_WEB_HOME=/path/to/webui #UI所在路径
 ```
-
 
 ### 部署到 qBittorrent
 
-1. 从release 下载 QBittorrent 客户端版本
+1. 从 release 下载 QBittorrent 客户端版本
 
 2. 将目录内容复制到自定义 WebUI 目录
 
@@ -90,16 +90,16 @@ environment:
 
 4. 重启 qBittorrent，访问 Web UI（默认 http://localhost:8080）
 
-
 ### 使用说明
 
 **登录认证**：
+
 - **qBittorrent**: 必须提供用户名和密码（使用 qBittorrent 设置的凭据）
 - **Transmission**: 如果 Transmission 启用了认证，需要提供凭据；否则可留空
 
 **退出登录**：
-- 点击右上角的退出按钮即可注销
 
+- 点击右上角的退出按钮即可注销
 
 ## 🔧 环境变量
 
@@ -132,13 +132,11 @@ environment:
 - [Transmission](https://transmissionbt.com/) - 轻量级 BT 客户端
 - [qBittorrent](https://www.qbittorrent.org/) - 开源 BT 客户端
 
-
 ## 预览
+
 ![首页](preview/index.png)
 ![数据统计](preview/stat1.png)
 ![统计](preview/stat2.png)
-
-
 
 ## 📄 License
 
